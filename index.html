@@ -4,23 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Syncube Watcher</title>
-    <meta name="description" content="Watch videos together in sync – hassle-free and fun!" />
-    <meta name="author" content="Uday Choudhary" />
-
-    <!-- Open Graph (for link previews) -->
-    <meta property="og:title" content="Syncube Watcher" />
-    <meta property="og:description" content="Watch videos together in sync – hassle-free and fun!" />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://yourdomain.com/preview.png" /> <!-- Optional: update with your own image -->
-    <meta property="og:url" content="https://sync-cube.vercel.app/" />
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@yourTwitterHandle" /> <!-- Optional: put your handle or remove -->
-    <meta name="twitter:image" content="https://yourdomain.com/preview.png" /> <!-- Optional: same image -->
-
+    
+    <!-- Prevent link previews -->
+    <meta name="robots" content="noai, noimageai" />
+    <meta name="robots" content="notranslate" />
+    <meta name="googlebot" content="noindex" />
+    <meta property="og:type" content="none" />
+    <meta name="twitter:card" content="none" />
+    
+    <!-- Remove all OpenGraph metadata -->
+    <meta property="og:title" content="" />
+    <meta property="og:description" content="" />
+    <meta property="og:image" content="" />
   </head>
-
   <body>
     <div id="root"></div>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
