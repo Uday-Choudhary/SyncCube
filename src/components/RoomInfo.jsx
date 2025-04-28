@@ -1,23 +1,17 @@
-
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn, copyToClipboard } from '@/lib/utils';
-import { useSocket } from '@/context/SocketContext';
 
 const RoomInfo = ({ roomId, connectedUsers = [] }) => {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
-  const { publicUrl } = useSocket();
   
-  // Use the deployed URL or fallback to browser URL
-  // Make sure we're using the correct URL format
-  const shareableLink = publicUrl ? 
-    `${publicUrl}/room/${roomId}` : 
-    `${window.location.origin}/room/${roomId}`;
+  // Always use the current window's origin for sharing
+  const shareableLink = `${window.location.origin}/room/${roomId}`;
   
   const handleCopyLink = async () => {
     try {
@@ -102,11 +96,9 @@ const RoomInfo = ({ roomId, connectedUsers = [] }) => {
               </Button>
             </div>
             
-            {publicUrl && (
-              <p className="text-xs text-green-500 mt-1">
-                Using public URL - link will work on any device!
-              </p>
-            )}
+            <p className="text-xs text-green-500 mt-1">
+              Using current window's origin - link will work on any device!
+            </p>
           </div>
         </div>
         
