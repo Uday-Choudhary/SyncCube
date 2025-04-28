@@ -25,7 +25,9 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
   const [seekValue, setSeekValue] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef(null);
-  
+  const [showControls, setShowControls] = useState(true);
+  const controlsTimeoutRef = useRef(null);
+
   useEffect(() => {
     console.log("Initializing YouTube player with videoId:", videoId);
     if (!videoId) {
@@ -359,6 +361,33 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
     };
   }, []);
 
+  const handleMouseMove = () => {
+    setShowControls(true);
+    
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    
+    controlsTimeoutRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 3000);
+  };
+
+  const handleMouseLeave = () => {
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    setShowControls(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, []);
+
   if (playerState.error) {
     return (
       <Card className="overflow-hidden">
@@ -377,7 +406,12 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
   
   return (
     <Card className="overflow-hidden">
-      <div ref={containerRef} className="relative w-full">
+      <div 
+        ref={containerRef} 
+        className="relative w-full"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
         <div className="relative aspect-video">
           <div ref={playerRef} className="absolute inset-0" />
           
@@ -390,20 +424,24 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
           )}
         </div>
         
-        <div className="px-4 py-3 flex flex-col gap-2">
+        <div 
+          className={`px-4 py-3 flex flex-col gap-2 absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300 ${
+            showControls ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
           <div className="flex items-center gap-4">
             <Button 
               onClick={togglePlayPause} 
               variant="ghost" 
               size="icon" 
               disabled={!playerReady}
-              className="h-10 w-10"
+              className="h-10 w-10 text-white hover:text-white hover:bg-white/20"
             >
               {playerState.isPlaying ? "⏸️" : "▶️"}
             </Button>
             
             <div className="flex-1 flex items-center gap-2">
-              <span className="text-sm font-mono">
+              <span className="text-sm font-mono text-white">
                 {formatTime(playerState.currentTime)}
               </span>
               
@@ -419,7 +457,7 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
                 className="flex-1"
               />
               
-              <span className="text-sm font-mono">
+              <span className="text-sm font-mono text-white">
                 {formatTime(playerState.duration)}
               </span>
             </div>
@@ -428,18 +466,17 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
               onClick={handleFullscreen}
               variant="ghost"
               size="icon"
-              className="h-10 w-10"
-              disabled={!playerReady}
+              className="h-10 w-10 text-white hover:text-white hover:bg-white/20"
             >
               {isFullscreen ? <Minimize /> : <Maximize />}
             </Button>
-            
-            {playerState.isBuffering && (
-              <div className="text-xs text-muted-foreground animate-pulse">
-                Buffering...
-              </div>
-            )}
           </div>
+          
+          {playerState.isBuffering && (
+            <div className="text-xs text-white/80 animate-pulse">
+              Buffering...
+            </div>
+          )}
         </div>
       </div>
     </Card>
