@@ -1,10 +1,10 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { formatTime } from '@/lib/utils';
 import { useSocket } from '@/context/SocketContext';
+import { Maximize, Minimize } from 'lucide-react';
 
 const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
   const playerRef = useRef(null);
@@ -22,10 +22,10 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
     error: null,
   });
   
-  // Local state to prevent excessive updates during dragging
   const [seekValue, setSeekValue] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef(null);
   
-  // Initialize YouTube Player API
   useEffect(() => {
     console.log("Initializing YouTube player with videoId:", videoId);
     if (!videoId) {
@@ -33,7 +33,6 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
       return;
     }
     
-    // Create YouTube Player script if not already loaded
     if (!window.YT) {
       const tag = document.createElement('script');
       tag.src = 'https://www.youtube.com/iframe_api';
@@ -42,12 +41,10 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
       
       window.onYouTubeIframeAPIReady = initializePlayer;
     } else {
-      // If already loaded, initialize player directly
       initializePlayer();
     }
     
     function initializePlayer() {
-      // If a player instance already exists, destroy it first
       if (playerInstanceRef.current) {
         try {
           playerInstanceRef.current.destroy();
@@ -88,7 +85,6 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
       }
     }
     
-    // Clean up
     return () => {
       if (playerInstanceRef.current) {
         try {
@@ -101,7 +97,6 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
     };
   }, [videoId]);
   
-  // Start progress tracking when player is ready
   useEffect(() => {
     if (!playerReady || !playerInstanceRef.current) return;
     
@@ -124,7 +119,6 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
     return () => clearInterval(progressInterval);
   }, [playerReady, playerState.isPlaying, playerState.isSeeking]);
   
-  // Player event handlers
   const onPlayerReady = (event) => {
     console.log("YouTube player ready:", event);
     setPlayerReady(true);
@@ -139,12 +133,10 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
       
       setSeekValue(initialState.currentTime || 0);
       
-      // Seek to initial position if specified
       if (initialState.currentTime > 0) {
         event.target.seekTo(initialState.currentTime, true);
       }
       
-      // Start playing if the initial state indicates it should be playing
       if (initialState.isPlaying) {
         event.target.playVideo();
       }
@@ -154,7 +146,6 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
   };
   
   const onPlayerStateChange = (event) => {
-    // Update player state based on YouTube player state
     if (!window.YT) return;
     
     try {
@@ -221,7 +212,6 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
     }));
   };
   
-  // Socket event handlers
   useEffect(() => {
     if (!socket || !playerReady) return;
     
@@ -230,7 +220,6 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
       setPlayerState(prev => ({ ...prev, isSyncing: true }));
       
       try {
-        // Seek to the current time if more than 2 seconds difference
         if (playerInstanceRef.current) {
           const playerTime = playerInstanceRef.current.getCurrentTime();
           if (Math.abs(playerTime - currentTime) > 2) {
@@ -249,7 +238,6 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
       setPlayerState(prev => ({ ...prev, isSyncing: true }));
       
       try {
-        // Seek to the current time if more than 2 seconds difference
         if (playerInstanceRef.current) {
           const playerTime = playerInstanceRef.current.getCurrentTime();
           if (Math.abs(playerTime - currentTime) > 2) {
@@ -277,7 +265,6 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
       }
     };
     
-    // Clean up old listeners and add new ones
     socket.off('video_play');
     socket.off('video_pause');
     socket.off('video_seek');
@@ -293,7 +280,6 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
     };
   }, [socket, roomId, playerReady]);
   
-  // Player controls
   const togglePlayPause = () => {
     if (!playerReady || !playerInstanceRef.current) return;
     
@@ -321,13 +307,11 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
     
     if (playerInstanceRef.current) {
       try {
-        // Emit seek event to others
         socket.emit('video_seek', { 
           roomId,
           currentTime: newTime
         });
         
-        // Update local player
         playerInstanceRef.current.seekTo(newTime, true);
         
         setPlayerState(prev => ({ 
@@ -342,7 +326,39 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
     }
   };
   
-  // If there's an error with the player
+  const handleFullscreen = () => {
+    if (!containerRef.current) return;
+    
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen()
+        .then(() => {
+          setIsFullscreen(true);
+        })
+        .catch(err => {
+          console.error('Error attempting to enable fullscreen:', err);
+        });
+    } else {
+      document.exitFullscreen()
+        .then(() => {
+          setIsFullscreen(false);
+        })
+        .catch(err => {
+          console.error('Error attempting to exit fullscreen:', err);
+        });
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   if (playerState.error) {
     return (
       <Card className="overflow-hidden">
@@ -361,61 +377,69 @@ const YouTubePlayer = ({ videoId, roomId, initialState = {} }) => {
   
   return (
     <Card className="overflow-hidden">
-      <div className="relative aspect-video">
-        <div ref={playerRef} className="absolute inset-0" />
-        
-        {!playerReady && (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" role="status">
-              <span className="sr-only">Loading player...</span>
-            </div>
-          </div>
-        )}
-      </div>
-      
-      <div className="px-4 py-3 flex flex-col gap-2">
-        <div className="flex items-center gap-4">
-          <Button 
-            onClick={togglePlayPause} 
-            variant="ghost" 
-            size="icon" 
-            disabled={!playerReady}
-            className="h-10 w-10"
-          >
-            {playerState.isPlaying ? (
-              "⏸️"
-            ) : (
-              "▶️"
-            )}
-          </Button>
+      <div ref={containerRef} className="relative w-full">
+        <div className="relative aspect-video">
+          <div ref={playerRef} className="absolute inset-0" />
           
-          <div className="flex-1 flex items-center gap-2">
-            <span className="text-sm font-mono">
-              {formatTime(playerState.currentTime)}
-            </span>
-            
-            <Slider
-              value={[seekValue]}
-              min={0}
-              max={playerState.duration || 100}
-              step={1}
-              onValueChange={handleSeekChange}
-              onValueCommit={handleSeekEnd}
-              onPointerDown={handleSeekStart}
-              disabled={!playerReady}
-              className="flex-1"
-            />
-            
-            <span className="text-sm font-mono">
-              {formatTime(playerState.duration)}
-            </span>
-          </div>
-          
-          {playerState.isBuffering && (
-            <div className="text-xs text-muted-foreground animate-pulse">
-              Buffering...
+          {!playerReady && (
+            <div className="absolute inset-0 flex items-center justify-center bg-muted">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" role="status">
+                <span className="sr-only">Loading player...</span>
+              </div>
             </div>
           )}
+        </div>
+        
+        <div className="px-4 py-3 flex flex-col gap-2">
+          <div className="flex items-center gap-4">
+            <Button 
+              onClick={togglePlayPause} 
+              variant="ghost" 
+              size="icon" 
+              disabled={!playerReady}
+              className="h-10 w-10"
+            >
+              {playerState.isPlaying ? "⏸️" : "▶️"}
+            </Button>
+            
+            <div className="flex-1 flex items-center gap-2">
+              <span className="text-sm font-mono">
+                {formatTime(playerState.currentTime)}
+              </span>
+              
+              <Slider
+                value={[seekValue]}
+                min={0}
+                max={playerState.duration || 100}
+                step={1}
+                onValueChange={handleSeekChange}
+                onValueCommit={handleSeekEnd}
+                onPointerDown={handleSeekStart}
+                disabled={!playerReady}
+                className="flex-1"
+              />
+              
+              <span className="text-sm font-mono">
+                {formatTime(playerState.duration)}
+              </span>
+            </div>
+
+            <Button
+              onClick={handleFullscreen}
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10"
+              disabled={!playerReady}
+            >
+              {isFullscreen ? <Minimize /> : <Maximize />}
+            </Button>
+            
+            {playerState.isBuffering && (
+              <div className="text-xs text-muted-foreground animate-pulse">
+                Buffering...
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </Card>
